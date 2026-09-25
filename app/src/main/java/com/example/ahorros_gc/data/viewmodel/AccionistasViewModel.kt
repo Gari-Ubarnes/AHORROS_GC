@@ -1,6 +1,7 @@
 package com.example.ahorros_gc.data.viewmodel
 
 import android.app.Application
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ahorros_gc.data.database.AppDatabase
@@ -22,7 +23,7 @@ class AccionistasViewModel(application: Application) : AndroidViewModel(applicat
     private val accionDao = AppDatabase.getDatabase(application).accionDao()
     private val cajaDao = AppDatabase.getDatabase(application).cajaDao()
 
-    private val interesdao= AppDatabase.getDatabase(application).interesingDao()
+    private val interesdao = AppDatabase.getDatabase(application).interesingDao()
 
     val accionistasobtenidos = dao.obtenerAccionistas().stateIn(
         scope = viewModelScope,
@@ -40,15 +41,26 @@ class AccionistasViewModel(application: Application) : AndroidViewModel(applicat
 
         ) {
         viewModelScope.launch {
-            val accionistas = Accionistas(
-                nombre = nombre,
-                apellido = apellido,
-                cedula = cedula,
-                celular = celular,
-                gmail = gmail,
-                direccion = direccion
-            )
-            dao.insertarAccionista(accionistas)
+
+            val cantidadAccionista = dao.contarAccionistasParaValidar()
+            if (cantidadAccionista >= 20) {
+                Toast.makeText(
+                    getApplication<Application>(), "Solo se pueden registrar 20 accionistas",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                return@launch
+            } else {
+                val accionistas = Accionistas(
+                    nombre = nombre,
+                    apellido = apellido,
+                    cedula = cedula,
+                    celular = celular,
+                    gmail = gmail,
+                    direccion = direccion
+                )
+                dao.insertarAccionista(accionistas)
+            }
 
 
         }
@@ -78,53 +90,68 @@ class AccionistasViewModel(application: Application) : AndroidViewModel(applicat
             // Eliminar accionista
             dao.eliminarAccionista(cedula)
 
+            //eliminar accion
+            accionDao.EliminarAccionXcedula(cedula)
+
         }
     }
 
     fun comprarAccion(accionistas: Accionistas) {
+
         viewModelScope.launch {
-            val fechaCompra = SimpleDateFormat(
-                "dd/MM/yyyy HH:mm:ss",
-                Locale.getDefault()
-            ).format(Date())
-            val accion = Acciones(
-                cedulaAccionista = accionistas.cedula,
-                codigoCuenta = "1205",
-                debito = 0,
-                credito = 5000,
-                fechaCompra = fechaCompra
-            )
-            accionDao.insertarAccionDao(accion)
+            val cantidadAccion = accionDao.contarAccionXcedula(accionistas.cedula)
+            //val fechaCompra=accionDao.obtenerfechaDeLaCompraAccion(Acciones.fechacompra)
+            if (cantidadAccion >= 5) {
 
-            val caja = Caja(
-                cedulaAccionista = accionistas.cedula,
-                codigoCuenta = "1105",
-                debito = 6000,
-                credito = 0,
-                fechaCompra = fechaCompra
-            )
-            cajaDao.insertarCajaDao(caja)
+                Toast.makeText(getApplication<Application>(),"${accionistas.nombre} Solo puedes comprar 5 acciones",
+                    Toast.LENGTH_SHORT).show()
+                return@launch
+            } else {
+                val fechaCompra = SimpleDateFormat(
+                    "dd/MM/yyyy HH:mm:ss",
+                    Locale.getDefault()
+                ).format(Date())
+                val accion = Acciones(
+                    cedulaAccionista = accionistas.cedula,
+                    codigoCuenta = "1205",
+                    debito = 0,
+                    credito = 5000,
+                    fechaCompra = fechaCompra
+                )
+                accionDao.insertarAccionDao(accion)
 
-            val interes= InteresIng(
-                cedulaAccionista = accionistas.cedula,
-                codigoCuenta = "415020",
-                debito = 0,
-                credito = 1000,
-                fechaCompra = fechaCompra
-            )
-            interesdao.insertarInteresIng(interes)
+                val caja = Caja(
+                    cedulaAccionista = accionistas.cedula,
+                    codigoCuenta = "1105",
+                    debito = 6000,
+                    credito = 0,
+                    fechaCompra = fechaCompra
+                )
+                cajaDao.insertarCajaDao(caja)
+
+                val interes = InteresIng(
+                    cedulaAccionista = accionistas.cedula,
+                    codigoCuenta = "415020",
+                    debito = 0,
+                    credito = 1000,
+                    fechaCompra = fechaCompra
+                )
+                interesdao.insertarInteresIng(interes)
+
+            }
 
         }
 
 
     }
+
     val saldoCaja = cajaDao.obtenersaldoCaja()
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             0L
         )
-    val saldoInteres=interesdao.obtenerSaldoInteres()
+    val saldoInteres = interesdao.obtenerSaldoInteres()
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(1000),
@@ -137,23 +164,26 @@ class AccionistasViewModel(application: Application) : AndroidViewModel(applicat
             SharingStarted.WhileSubscribed(5000),
             emptyList()
         )
+
     //un no esta funcionando
-    fun BuscarCajaXcedula(cedula: String,callback: (List<Caja>) -> Unit){
+    fun BuscarCajaXcedula(cedula: String, callback: (List<Caja>) -> Unit) {
         viewModelScope.launch {
-            val resultado=cajaDao.obtenerCajaXcedula(cedula)
+            val resultado = cajaDao.obtenerCajaXcedula(cedula)
             callback(resultado)
         }
 
     }
-    fun BuscarAccionistaXcedula(cedula: String,callback: (Accionistas?) -> Unit){
+
+    fun BuscarAccionistaXcedula(cedula: String, callback: (Accionistas?) -> Unit) {
         viewModelScope.launch {
-            val accionista=dao.buscarXcedula(cedula)
+            val accionista = dao.buscarXcedula(cedula)
             callback(accionista)
         }
     }
-    fun BuscarAccionXcedulaVM(cedula: String,callback: (List<Acciones>) -> Unit){
+
+    fun BuscarAccionXcedulaVM(cedula: String, callback: (List<Acciones>) -> Unit) {
         viewModelScope.launch {
-            val accionista=accionDao.obtenerAccionXcedula(cedula)
+            val accionista = accionDao.obtenerAccionXcedula(cedula)
             callback(accionista)
         }
     }

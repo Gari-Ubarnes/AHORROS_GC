@@ -27,6 +27,7 @@ interface AccionistasDao {
     @Query("DELETE FROM accionistas WHERE cedula = :cedula")
     suspend fun eliminarAccionista(cedula: String)
 
-
+    @Query("SELECT COUNT(*) FROM accionistas")
+    suspend fun contarAccionistasParaValidar(): Int
 
 }

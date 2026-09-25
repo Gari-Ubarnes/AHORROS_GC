@@ -1,6 +1,7 @@
 package com.example.ahorros_gc.data.dao
 
 import androidx.room3.Dao
+import androidx.room3.Delete
 import androidx.room3.Insert
 import androidx.room3.Query
 import com.example.ahorros_gc.data.dto.ResumenAccionista
@@ -34,5 +35,15 @@ interface AccionDao {
 
     @Query("SELECT * FROM acciones WHERE cedulaAccionista = :cedula")
     suspend fun obtenerAccionXcedula(cedula: String): List<Acciones>
+
+   @Query("DELETE FROM acciones WHERE cedulaAccionista = :cedula")
+   suspend fun EliminarAccionXcedula(cedula: String)
+
+   @Query("SELECT COUNT(*) FROM acciones WHERE cedulaAccionista = :cedula")
+   suspend fun contarAccionXcedula(cedula: String): Int
+
+     // @Query("SELECT * FROM acciones WHERE fechacompra= :cedula")
+    //suspend fun obtenerfechasDeCompra(): String
+
 
 }
